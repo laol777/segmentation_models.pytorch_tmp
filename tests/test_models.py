@@ -4,7 +4,6 @@ import mock
 import pytest
 import torch
 import random
-import importlib
 
 # mock detection module 
 sys.modules['torchvision._C'] = mock.Mock()
@@ -36,8 +35,9 @@ def _select_names(names, k=2):
         return names
 
 
-def _test_forward_backward(model_fn, encoder_name, **model_params):
-    model = model_fn(encoder_name, encoder_weights=None, **model_params)
+def _test_forward_backward(model_fn, encoder_name):
+
+    model = model_fn(encoder_name, encoder_weights=None)
 
     x = torch.ones((1, 3, 64, 64))
     y = model.forward(x)
@@ -45,8 +45,8 @@ def _test_forward_backward(model_fn, encoder_name, **model_params):
     l.backward()
 
 
-def _test_pretrained_model(model_fn, encoder_name, encoder_weights, **model_params):
-    model = model_fn(encoder_name, encoder_weights=encoder_weights, **model_params)
+def _test_pretrained_model(model_fn, encoder_name, encoder_weights):
+    model = model_fn(encoder_name, encoder_weights=encoder_weights)
 
     x = torch.ones((1, 3, 64, 64))
     y = model.predict(x)
@@ -65,10 +65,6 @@ def test_fpn(encoder_name):
     _test_forward_backward(smp.FPN, encoder_name)
     _test_pretrained_model(smp.FPN, encoder_name, get_pretrained_weights_name(encoder_name))
 
-    from functools import partial
-    _test_forward_backward(partial(smp.FPN, decoder_merge_policy='cat'), encoder_name)
-    _test_pretrained_model(partial(smp.FPN, decoder_merge_policy='cat'), encoder_name, get_pretrained_weights_name(encoder_name))
-
 
 @pytest.mark.parametrize('encoder_name', _select_names(ENCODERS, k=1))
 def test_linknet(encoder_name):
@@ -80,12 +76,6 @@ def test_linknet(encoder_name):
 def test_pspnet(encoder_name):
     _test_forward_backward(smp.PSPNet, encoder_name)
     _test_pretrained_model(smp.PSPNet, encoder_name, get_pretrained_weights_name(encoder_name))
-
-
-@pytest.mark.skipif(importlib.util.find_spec('inplace_abn') is None, reason='')
-def test_inplace_abn():
-    _test_forward_backward(smp.Unet, 'resnet18', decoder_use_batchnorm='inplace')
-    _test_pretrained_model(smp.Unet, 'resnet18', get_pretrained_weights_name('resnet18'), decoder_use_batchnorm='inplace')
 
 
 if __name__ == '__main__':
